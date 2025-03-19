@@ -1,0 +1,116 @@
+---
+title: "Social Forecasting Tutorial 1"
+author: "Martyn Egan"
+date: "16/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(forecast)
+library(zoo)
+
+setwd(getwd())
+```
+
+# Time Series in R and Visualisation
+
+## The `ts` object
+
+R has a built-in data format for time series data, the `ts` object. We create `ts` objects using the `ts()` function, which has arguments `x` (a vector, matrix or data frame to be coerced), `start` (the time of the first observation, either a single number or a vector of two numbers, the second of which is an integer corresponding to the time unit), `end` (the time of the last observation, possibly optional), and `frequency` (the number of observations per unit of time, i.e. 12 for months, 4 for quarters).
+
+```{r time series objects}
+amtrak <- read.csv("data/Amtrak.csv")
+
+amtrak.ts <- ts(amtrak$Ridership, start = c(1991, 1), end = c(2004, 3), frequency = 12)
+```
+
+## Indexing and subsetting a `ts` object
+
+There are several ways to subset and index a time series object. A useful function is `window()`, which takes the arguments `x`, a time-series object, `start` and `end` (which behave the same as in the `ts()` function). We can also use square bracket indexing with the `cycle()` function to, for example, sub-set certain units (months, quarters, etc.) 
+
+The `forecast` package contains a method for the `subset()` function which extends it to the `ts` class, allowing subsetting on, for example `month` or `quarter`.
+
+```{r indexing and subsetting}
+window(amtrak.ts, start = 1995, end = c(2000, 5)) #subset from 1995 to May 2000 inclusive
+
+amtrak.ts[cycle(amtrak.ts) == 1] #subset all data from January
+
+subset(amtrak.ts, month = "Jan") #subset all data from January
+```
+
+## Plotting a `ts` object
+
+`R`'s base plotting function contains a method for `ts` objects. The `forecast` package contains an extension to `ggplot2`'s `autoplot()` function, which extends it to `ts` objects.
+
+```{r time series plots}
+plot(amtrak.ts, xlab = "Time", 
+     ylab = "thousands of riders", 
+     main = "Amtrak ridership data",
+     ylim = c(1300, 2300), bty = "l")
+
+autoplot(amtrak.ts) +
+  labs(title = "Amtrak ridership data") +
+  ylab("thousands of riders")
+```
+
+## Time series components
+
+Visualising time series data enables us to discern the main components of the series. These are **level**, the average value of the series; **trend**, any long-term increase or decrease in the data; **seasonality**, which are regular patterns corresponding to the calendar (a related component is **cyclic** behaviour, which are rises and falls not of a fixed calendar period); and **noise**, which is the random variation in our data. 
+
+The Amtrak data we plotted above has a level of around 1.8m passengers per month. There is a slight U-shaped trend, and also annual seasonality, with peak travel in the summer months of July and August. 
+
+## More advanced plotting
+
+The `forecast` package extends a number of `ggplot2`'s capabilities to create more advanced time series visualisations. Among these are the `ggseasonplot()` and `ggsubseriesplot()` functions.
+
+```{r advanced plotting}
+ggseasonplot(amtrak.ts) #showing us seasonal trends
+ggseasonplot(amtrak.ts, polar = TRUE) + #a polar representation
+  theme(legend.position="none") #suppress the legend
+
+ggsubseriesplot(amtrak.ts) #showing us the trend in each month across the whole series
+```
+
+### Task
+
+Using the ApplianceShipments.csv file (a series of quarterly shipments (in millions of USD) of US household appliances between 1985-1989):
+
+- Inspect the dataset and convert it to an appropriately formatted `ts` object.
+- Create a well-formatted time plot of the data.
+- Which of the four components (level, trend, seasonality, noise) seem to be present in this series?
+
+```{r task one, eval = FALSE}
+aps <- #read in the csv
+
+aps.ts <- #convert to ts
+
+#create a plot
+```
+
+## Trends
+
+An additional visual aid can be the addition of a trend line to the time series. We will look more closely at smoothing techniques in the coming weeks. For now though, we will use the `tslm()` function in the `forecast` package to add a simple quadratic trend line to our Amtrak data (to attempt to model the U-shaped curve).
+
+```{r trend lines}
+amtrak.lm <- tslm(amtrak.ts ~ trend + I(trend^2))
+
+plot(amtrak.ts, xlab = "Time", ylab = "Ridership", ylim = c(1300, 2300), bty = "l")
+lines(amtrak.lm$fitted, lwd = 2)
+```
+
+### Task
+
+The `Sept11Travel.csv` dataset analyses monthly passenger movement data between January 1990 and April 2004, in terms of 1) airline revenue passenger miles (Air), 2) rail passenger miles (Rail), and 3) vehicle miles (Auto).
+
+- Use the `window()` function to subset the data **before** September 2001.
+- Plot one of the time series (Air, Rail or Auto)
+- What trend appears? Try changing the scale of the series, adding trend lines and suppressing seasonality to better visualise the trend pattern.
+
+```{r task two, eval = FALSE}
+sept11 <- read.csv("data/Sept11Travel.csv") #read in csv
+sept11.ts <- #create a ts object
+pre.ts <- #subset data for before Sept 2001
+  
+```
