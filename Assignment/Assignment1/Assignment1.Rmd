@@ -1,0 +1,123 @@
+---
+title: "Assignment1"
+author: "Athena Rodrigues"
+date: "2025-03-19"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+## Set Up
+
+The tidyverse, forecast, readr, and ggplot2 packages were used in this assignment.
+
+```{r loading packages, include = FALSE}
+library(tidyverse)
+library(forecast)
+library(readr)
+library(ggplot2)
+setwd("C:/Users/athen/Documents/GitHub/SocialForecasting_Spring2025/Assignment/Assignment1")
+```
+
+## Question 1
+
+Loading the data set into R.
+
+```{r}
+rd <- read_csv("AFG_IRL_refugeeData.csv", show_col_types = FALSE)
+head(rd)
+summary(rd)
+```
+
+## Question 2
+
+Creating Time Series Object
+
+```{r}
+rdts <- ts(rd$`Refugees under UNHCR's mandate`, start = c(1999), end = c(2021), frequency = 1)
+print(rdts)
+```
+
+## Question 3
+
+Time Series Plot
+
+```{r}
+autoplot(rdts) +
+  labs(title = "Afghan Refugees into Ireland from 1999 - 2021") + 
+  xlab("Year") +
+  ylab("Number of Refugees")
+```
+
+## Question 4
+
+Forecasting Report for 2016 to 2021 using 1999 to 2015
+
+```{r}
+train <- window(rdts, start = 1999, end = 2015)
+```
+
+*Average Method*
+
+```{r}
+average <- meanf(train, h = 6)
+summary(average)
+autoplot(train) +
+  autolayer(average, series="Average", PI=TRUE) +
+  labs(title = "Average Method Forecasting") + 
+  xlab("Year") +
+  ylab("Number of Refugees")
+```
+
+*Naive Method*
+
+```{r}
+naive <- naive(train, h=6)
+summary(naive)
+autoplot(train) +
+  autolayer(naive, series="Naive", PI=TRUE)+
+  labs(title = "Naive Method Forecasting") + 
+  xlab("Year") +
+  ylab("Number of Refugees")
+```
+
+*Drift Method*
+
+```{r}
+drift <- rwf(train, h=6, drift=TRUE)
+summary(drift)
+autoplot(train) +
+  autolayer(drift, series="Drift", PI=TRUE) +
+  labs(title = "Drift Method Forecasting") + 
+  xlab("Year") +
+  ylab("Number of Refugees")
+```
+
+*Overall Forecast of Methods*
+
+```{r}
+forecast_table <- data.frame(
+  Year = 2016:2021,
+  Average = average$mean,
+  Naive = naive$mean,
+  Drift = drift$mean
+)
+forecast_table
+```
+
+## Question 5
+
+```{r}
+autoplot(rdts) +
+  autolayer(average, series="Average", PI=FALSE) +
+  autolayer(naive, series="Naive", PI=FALSE) +
+  autolayer(drift, series="Drift", PI=FALSE) +
+  labs(title = "Forecasts for Afghan Refugees into Ireland (2016-2021)",
+       x = "Year", y = "Number of Refugees") +
+  guides(colour=guide_legend(title="Method"))
+```
+
+## Question 6
+
+The Drift Method is the best method out of the three for forecasting the number of Afghan refugees entering Ireland. The other two methods show no change in the number of refugees over time, which is known to be false when compared to the actual data. The Average and Naive Methods' focus on past observations fails to correctly forecast the increase in refugee numbers, however, the Drift Method's approximation attempts using average and last observations incorporate this increase over time. To improve the drift method, rolling or time series cross-validation could be added to assess the model's predictive accuracy over time.

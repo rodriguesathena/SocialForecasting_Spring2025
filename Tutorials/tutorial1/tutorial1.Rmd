@@ -21,7 +21,7 @@ setwd(getwd())
 R has a built-in data format for time series data, the `ts` object. We create `ts` objects using the `ts()` function, which has arguments `x` (a vector, matrix or data frame to be coerced), `start` (the time of the first observation, either a single number or a vector of two numbers, the second of which is an integer corresponding to the time unit), `end` (the time of the last observation, possibly optional), and `frequency` (the number of observations per unit of time, i.e. 12 for months, 4 for quarters).
 
 ```{r time series objects}
-amtrak <- read.csv("data/Amtrak.csv")
+amtrak <- read.csv("Amtrak.csv")
 
 amtrak.ts <- ts(amtrak$Ridership, start = c(1991, 1), end = c(2004, 3), frequency = 12)
 ```
