@@ -1,0 +1,125 @@
+---
+title: "Assignment 2"
+output: html_document
+author: "Athena Rodrigues"
+date: "2025-04-03"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+setwd("C:/Users/athen/Documents/GitHub/SocialForecasting_Spring2025/Assignment/Assignment2")
+library(tidyr)
+library(readr)
+library(knitr)
+library(ggplot2)
+library(fpp2)
+```
+
+# Question 1
+
+```{r loading data}
+data <- read_csv("usmelec.csv")
+data_ts <- ts(data$val, start = c(1973, 1), frequency = 12)
+autoplot(data_ts) +
+  ggtitle("US Monthly Electricity Generation (1973–2013)") +
+  ylab("Billion kWh") + xlab("Year") + theme_minimal()
+```
+
+# Question 2
+
+```{r decompose data}
+decomp <- stl(data_ts, s.window = "periodic")
+
+seasonal <- decomp$time.series[, "seasonal"]
+head(seasonal)
+autoplot(seasonal) + ggtitle("Seasonal Component") + theme_minimal()
+trend <- decomp$time.series[, "trend"]
+head(trend)
+autoplot(trend) + ggtitle("Trend Component") + theme_minimal()
+remainder <- decomp$time.series[, "remainder"]
+head(remainder)
+autoplot(remainder) + ggtitle("Remainder Component") + theme_minimal()
+
+
+autoplot(decomp) +
+  ggtitle("Full Decomposition of US Electricity Generation") +
+  theme_minimal()
+
+```
+
+# Question 3
+
+```{r exponential smoothing curve}
+smooth <- ses(data_ts, h=12, alpha = 0.05)
+autoplot(smooth) +
+  autolayer(fitted(smooth), series = "Fitted") +
+  ggtitle("Simple Exponential Smoothing Forecast") +
+  ylab("Electricity Generation (Billion kWh)") +
+  xlab("Year") +
+  guides(colour = guide_legend(title = "Series")) +
+  theme_minimal()
+```
+
+# Question 4
+
+```{r original acf}
+#non-stationary
+ggAcf(data_ts) +  ggtitle("Original ACF Plot")
+```
+
+Original ACF plot: There is high autocorrelation at multiple lags which
+can be seen in spikes at seasonal intervals, every 12 months. This shows
+a strong seasonality that is expected with monthly electricity
+generation data. If there were a quick drop in ACF to zero the data
+would be stationary. However, the slow decay in autocorrelation
+indicated non-stationarity. \n
+
+Addressing ACF: To properly model this data
+differencing is needed to remove trends and stabilize data. This could
+be done through seasonal differencing (lag =12) that would prepare the
+data for an ARIMA or seasonal ARIMA model which could account for trend
+and seasonal autocorrelation. 
+
+```{r differencing acf}
+#seasonal differencing
+differencing <- diff(data_ts, lag = 12)
+ggAcf(differencing) +
+  ggtitle("ACF Plot after Seasonal Differencing")
+```
+
+\n Differencing ACF Plot: After applying
+seasonal differencing as mentioned above, the ACF plot shows a
+significant reduction in autocorrelation with a decrease of most lags
+and the elimination of seasonal spikes. The removal of the seasonal
+component has moved the series closer to stationarity.
+
+# Question 5
+
+```{r fitting ARIMA}
+arimamodel <- auto.arima(data_ts)
+summary(arimamodel)
+```
+
+The selected model by `auto.arima()` is ARIMA(1,0,2)(0,1,1)[12] with drift. The corresponding equation is:
+
+$$
+y_t = y_{t-1} + 0.3834 + 0.9717(y_{t-1} - y_{t-2}) + \varepsilon_t - 0.4374\,\varepsilon_{t-1} - 0.2774\,\varepsilon_{t-2} - 0.7061\,\varepsilon_{t-12}
+$$
+
+
+# Question 6
+
+```{r visualizing ARIMA}
+checkresiduals(arimamodel) 
+```
+Using `checkresiduals` shows how well the ARIMA model fits the electricity data by checking the leftover patterns through the Ljung-Box Test and various plots. \n
+
+Ljung-Box Test: This test checks if residuals are random with a p-value greater than 0.05 being significant of randomness achieved. Because the p-value is small, randomness of residuals is not achieved. This suggests that the model may have missed some patterns in the data with some time structure at seasonal lags still present. \n
+
+Residuals Over Time: The top plot shows the actual data versus what the model predicted. For a good model, the residuals should shift around zero with no distinct pattern. In this plot the residuals are random and evenly spread which is good however the larger spikes showcases some remnants of the seasonal spike. \n
+
+ACF Plot: The bottom left checks if there is any pattern of seasonality or time remaining. Most lags should stay within the blue lines to show there is no strong autocorrelation left. Majority of the bars in this plot stay within the lines showing the model is able to handle the time-relations well, however there is still excess lag seen at varied periods. \n
+
+Residuals: The bottom right shows the distribution of residuals. This should show as a bell curve, highlighted in red, that is centered at zero representing an overall normal distribution. The plot largely follows this curve although there is a skew left showing some error has occurred. \n
