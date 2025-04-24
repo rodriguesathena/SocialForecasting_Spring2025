@@ -1,0 +1,76 @@
+---
+title: "Final Assignment Code"
+output: html_document
+author: Athena Rodrigues
+date: "2025-04-24"
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+setwd("C:/Users/athen/Documents/GitHub/SocialForecasting_Spring2025/Assignment/FinalAssignment")
+library(readr)
+library(dplyr)
+library(forecast)
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r data prep}
+food_raw <- read_csv("foodandbeverage.csv", show_col_types = FALSE)
+colnames(food_raw) <- c("series_id", "year", "period", "label", "CPI")
+food_data <- food_raw %>%
+  mutate(
+    date = parse_date_time(label, orders = "Y b"),
+    CPI = as.numeric(CPI)
+  ) %>%
+  select(date, CPI) %>%
+  arrange(date)
+```
+
+```{r timeseries}
+start_year  <- year(min(food_data$date))
+start_month <- month(min(food_data$date))
+food_ts     <- ts(food_data$CPI, start = c(start_year, start_month), frequency = 12)
+```
+
+```{r checking seasonality}
+autoplot(food_ts) +
+  ggtitle("Time Series") +
+  xlab("Time") + ylab("CPI") + theme_minimal()
+ggAcf(food_ts) + ggtitle("ACF of Original Data")
+
+```
+```{r train/test Model}
+train_ts <- window(food_ts, end = c(2023, 12))
+test_ts  <- window(food_ts, start = c(2024, 1))
+```
+
+```{r ARIMA}
+# Fitting
+arima_model <- auto.arima(train_ts)
+summary(arima_model)
+accuracy(fitted(arima_model), train_ts)
+```
+
+```{r Actual vs Model plot}
+autoplot(train_ts) +
+  autolayer(fitted(arima_model), series = "Fitted ARIMA") + xlab("Time") + ylab("CPI") +
+  ggtitle("ARIMA In-Sample Fit") +
+  theme_minimal()
+```
+
+```{r Residuals}
+checkresiduals(arima_model)
+```
+
+```{r Forecasting}
+forecast_arima <- forecast(arima_model, h = length(test_ts))
+```
+
+```{r Forecasting Model}
+autoplot(forecast_arima) +
+  autolayer(test_ts, series = "Prediction") +
+  xlab("Time") + ylab("CPI") +
+  ggtitle("Forecast vs Actuals") +
+  theme_minimal()
+```
